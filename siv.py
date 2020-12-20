@@ -5,11 +5,19 @@
 import argparse
 import os
 import sys
+import csv
+import pwd
+import grp
+import time
+import hashlib
+
+total_dirs = 0
+total_files = 0
 
 
 def is_sub_path(directory, file):
     """
-    check the location of the verification file and the report file are outside the monitored directory
+    check the location of the verification file and the report file are outside the monitored directory.
     :param directory:
     :param file:
     :return: boolean
@@ -35,21 +43,87 @@ def check_overwrite(file):
         sys.exit("Unrecognized input, abort.")
 
 
+def traverse_dir(path):
+    """
+    use os.walk() to traverse directories,
+    and use os.stat() to collect information,
+    store it in the class FileInfo.
+    :param path:
+    :return: file_info
+    """
+    file_info = FileInfo()
+    abs_path = os.path.abspath(path)
+    all_dirs_files = []
+    global total_dirs, total_files
+
+    # count the number of dirs and files
+    for root, dirs, files in os.walk(abs_path):
+        total_dirs += len(dirs)
+        total_files += len(files)
+        # gather the whole dirs and files
+        for f in dirs + files:
+            all_dirs_files.append(os.path.join(root, f))
+
+    # collect the info
+    for file_path in sorted(all_dirs_files):
+        file_stat = os.stat(file_path)
+
+        file_info.f_path = file_path
+        file_info.f_size = file_stat.st_size
+        file_info.user_name = pwd.getpwuid(file_stat.st_uid).pw_name
+        file_info.group_name = grp.getgrgid(file_stat.st_gid).gr_name
+        file_info.access_right = oct(file_stat.st_mode)
+        file_info.modified_date = time.asctime(time.localtime(file_stat.st_mtime))
+        if os.path.isfile(file_path):  # is file?
+            # get the checksum
+            hash_obj = hashlib.new(hash_fuc)
+            f_size = file_stat.st_size
+            try:
+                with open(file_path, mode='rb') as f:
+                    while f_size:
+                        content = f.read(1024)
+                        hash_obj.update(content)
+                        f_size -= len(content)
+            except IOError:
+                sys.exit(f"Unable to read the file '{file_path}'.")
+            file_info.message_digest = hash_obj.hexdigest()
+        else:  # is dir
+            file_info.message_digest = None
+
+        yield file_info
+
+
+class FileInfo:
+    """
+    A single file's information.
+    """
+    def __init__(self, f_path=None, f_size=None, user_name=None,
+                 group_name=None, access_right=None,
+                 modified_date=None, message_digest=None):
+        self.f_path = f_path
+        self.f_size = f_size
+        self.user_name = user_name
+        self.group_name = group_name
+        self.access_right = access_right
+        self.modified_date = modified_date
+        self.message_digest = message_digest
+
+
 # command line parser
 description_text = "A very simple system integrity verifier(SIV) for the Linux system."
 example_text = '''
 Example 1: Initialization mode
-siv.py -i -D important_directory -V verificationDB -R my_report.txt -H sha1
+siv.py -i -D important_directory -V verificationDB.csv -R my_report.txt -H sha1
 Example 2: Verification mode
-siv.py -v -D important_directory -V verificationDB -R my_report2.txt'''
+siv.py -v -D important_directory -V verificationDB.csv -R my_report2.txt'''
 
 parser = argparse.ArgumentParser(description=description_text,
                                  epilog=example_text,
                                  formatter_class=argparse.RawTextHelpFormatter)
 
-group = parser.add_mutually_exclusive_group(required=True)  # at least one argument
-group.add_argument('-i', dest="mode", action="store_const", const='i', help="use the initialization mode")
-group.add_argument('-v', dest="mode", action="store_const", const='v', help="use the verification mode")
+exc_group = parser.add_mutually_exclusive_group(required=True)  # at least one argument
+exc_group.add_argument('-i', dest="mode", action="store_const", const='i', help="use the initialization mode")
+exc_group.add_argument('-v', dest="mode", action="store_const", const='v', help="use the verification mode")
 
 parser.add_argument('-D', dest="monitored_dir", metavar="monitored_directory", nargs=1, required=True,
                     help="specify the path of the monitored directory")
@@ -72,7 +146,8 @@ print(f"the verification file is: {verification_file}")
 print(f"the report file is: {report_file}")
 print("===")
 
-if mode == 'i':  # initialization mode
+# initialization mode
+if mode == 'i':
     print("Start the initialization mode.")
 
     if args.hash_fuc is None:
@@ -103,8 +178,34 @@ if mode == 'i':  # initialization mode
         if not check_overwrite(report_file):
             sys.exit("The report file remains, abort.")
 
+    start_time = time.perf_counter()
 
-else:  # mode == 'v' verification mode
+    # create the verification file using csv file
+    with open(verification_file, 'w') as verification_csv_file:
+        verification_writer = csv.writer(verification_csv_file)
+        verification_writer.writerow([hash_fuc])  # write into the hash function
+
+        for f_info in traverse_dir(monitored_dir):
+            verification_writer.writerow([f_info.f_path, f_info.f_size, f_info.user_name, f_info.group_name,
+                                          f_info.access_right, f_info.modified_date, f_info.message_digest])
+
+    end_time = time.perf_counter()
+    total_time = end_time - start_time
+
+    # create the report file
+    with open(report_file, 'w') as wr_file:
+        wr_file.write(f"The monitored directory is: '{os.path.abspath(monitored_dir)}'.\n")
+        wr_file.write(f"The verification file is: '{os.path.abspath(verification_file)}'.\n")
+        wr_file.write(f"The number of directories is: '{total_dirs}'.\n")
+        wr_file.write(f"The number of files is: '{total_files}'.\n")
+        wr_file.write(f"The complete time is: '{total_time}' seconds.\n")
+
+    print("Finish the initialization mode.")
+    print(f"The verification file is stored in the '{os.path.abspath(verification_file)}'.")
+    print(f"The report file is stored in the '{os.path.abspath(report_file)}'.")
+
+# verification mode
+else:  # mode == 'v'
     if args.hash_fuc is not None:
         parser.error("The hash function('-H') can not be used in the verification mode.")
     else:
