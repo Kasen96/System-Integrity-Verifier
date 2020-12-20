@@ -65,20 +65,19 @@ mode = args.mode
 monitored_dir = args.monitored_dir[0]
 verification_file = args.verification_file[0]
 report_file = args.report_file[0]
-if args.hash_fuc is not None:
-    hash_fuc = args.hash_fuc[0]
-else:
-    hash_fuc = None
 
 print("===")
 print(f"the monitored dir is: {monitored_dir}")
 print(f"the verification file is: {verification_file}")
 print(f"the report file is: {report_file}")
-print(f"the hash function is: {hash_fuc}")
 print("===")
 
 if mode == 'i':  # initialization mode
     print("Start the initialization mode.")
+
+    if args.hash_fuc is None:
+        parser.error("The hash function('-H') is required in the initialization mode.")
+    hash_fuc = args.hash_fuc[0]
 
     # dir exists?
     if not os.path.exists(monitored_dir):
@@ -106,7 +105,7 @@ if mode == 'i':  # initialization mode
 
 
 else:  # mode == 'v' verification mode
-    if hash_fuc is not None:
+    if args.hash_fuc is not None:
         parser.error("The hash function('-H') can not be used in the verification mode.")
     else:
         print("Start the verification mode.")
