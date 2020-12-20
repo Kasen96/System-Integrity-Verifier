@@ -6,9 +6,23 @@ The SIV can be run either in initialization mode or in verification mode.
 
 # Environment
 
-Ubuntu 18.04
+MacOS / Ubuntu 18.04
 
 Python 3.6
+
+# Usage
+
+In the initialization mode, the hash function only supports 'md5' and 'sha1'.
+
+``` shell
+# Example 1: Initialization mode
+python3 siv.py -i -D important_directory -V verificationDB.csv -R report.txt -H <digest>
+```
+
+``` shell
+# Example 2: Verification mode
+python3 siv.py -v -D important_directory -V verificationDB.csv -R report.txt
+```
 
 # LICENSE
 
