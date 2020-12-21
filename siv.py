@@ -14,6 +14,7 @@ import hashlib
 total_dirs = 0
 total_files = 0
 warnings_num = 0
+HASH_LISTS = list(hashlib.algorithms_guaranteed)
 
 
 def is_sub_path(directory, file):
@@ -135,7 +136,7 @@ parser.add_argument('-V', dest="verification_file", metavar="verification_file",
                     help="specify the path of the verification file")
 parser.add_argument('-R', dest="report_file", metavar="report_file", nargs=1, required=True,
                     help="specify the path of the report file")
-parser.add_argument('-H', dest="hash_fuc", nargs=1, choices=['sha1', 'md5'], help="specify the hash function")
+parser.add_argument('-H', dest="hash_fuc", nargs=1, choices=HASH_LISTS, help="specify the hash function")
 
 args = parser.parse_args()
 
