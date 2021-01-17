@@ -193,11 +193,11 @@ if mode == 'i':
 
     # create the report file
     with open(report_file, 'w') as wr_file:
-        wr_file.write(f"The monitored directory is:   '{os.path.abspath(monitored_dir)}'.\n")
-        wr_file.write(f"The verification file is:     '{os.path.abspath(verification_file)}'.\n")
-        wr_file.write(f"The number of directories is: '{total_dirs}'.\n")
-        wr_file.write(f"The number of files is:       '{total_files}'.\n")
-        wr_file.write(f"The total time is:            '{total_time}' seconds.\n")
+        wr_file.write(f"The monitored directory is:          '{os.path.abspath(monitored_dir)}'.\n")
+        wr_file.write(f"The verification file is:            '{os.path.abspath(verification_file)}'.\n")
+        wr_file.write(f"The number of directories inside is: '{total_dirs}'.\n")
+        wr_file.write(f"The number of files is:              '{total_files}'.\n")
+        wr_file.write(f"The total time is:                   '{round(total_time, 6)}' seconds.\n")
 
     print("Finish the initialization mode.")
     print(f"The verification file is stored in the '{os.path.abspath(verification_file)}'.")
@@ -292,13 +292,13 @@ else:  # mode == 'v'
             total_time = end_time - start_time
 
             # report summary
-            wr_file.write(f"The monitored directory is:   '{os.path.abspath(monitored_dir)}'.\n")
-            wr_file.write(f"The verification file is:     '{os.path.abspath(verification_file)}'.\n")
-            wr_file.write(f"The report file is:           '{os.path.abspath(report_file)}'.\n")
-            wr_file.write(f"The number of directories is: '{total_dirs}'.\n")
-            wr_file.write(f"The number of files is:       '{total_files}'.\n")
-            wr_file.write(f"The number of warnings is:    '{warnings_num}'.\n")
-            wr_file.write(f"The total time is:            '{total_time}' seconds.\n")
+            wr_file.write(f"The monitored directory is:                 '{os.path.abspath(monitored_dir)}'.\n")
+            wr_file.write(f"The verification file is:                   '{os.path.abspath(verification_file)}'.\n")
+            wr_file.write(f"The report file is:                         '{os.path.abspath(report_file)}'.\n")
+            wr_file.write(f"The number of directories inside is:        '{total_dirs}'.\n")
+            wr_file.write(f"The number of files is:                     '{total_files}'.\n")
+            wr_file.write(f"The number of warnings is:                  '{warnings_num}'.\n")
+            wr_file.write(f"The total time is:                          '{round(total_time, 6)}' seconds.\n")
 
         print("Finish the verification mode.")
         print(f"The report file is stored in the '{os.path.abspath(report_file)}'.")
