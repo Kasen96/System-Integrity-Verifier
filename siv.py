@@ -10,6 +10,7 @@ import pwd
 import grp
 import time
 import hashlib
+import stat
 
 total_dirs = 0
 total_files = 0
@@ -74,7 +75,10 @@ def traverse_dir(path):
         file_info.f_size = file_stat.st_size
         file_info.user_name = pwd.getpwuid(file_stat.st_uid).pw_name
         file_info.group_name = grp.getgrgid(file_stat.st_gid).gr_name
-        file_info.access_right = oct(file_stat.st_mode)
+        # oct
+        # file_info.access_right = oct(file_stat.st_mode)
+        # symbolic
+        file_info.access_right = stat.filemode(file_stat.st_mode)
         file_info.modified_date = time.asctime(time.localtime(file_stat.st_mtime))
         if os.path.isfile(file_path):  # is file?
             # get the checksum
