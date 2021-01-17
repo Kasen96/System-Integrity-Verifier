@@ -145,6 +145,9 @@ monitored_dir = args.monitored_dir[0]
 verification_file = args.verification_file[0]
 report_file = args.report_file[0]
 
+if os.path.splitext(verification_file)[-1] == "":
+    verification_file += ".csv"
+
 # initialization mode
 if mode == 'i':
     print("Start the initialization mode.")
