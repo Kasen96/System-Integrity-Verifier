@@ -8,7 +8,7 @@ The SIV can be run either in initialization mode or in verification mode.
 
 MacOS / Ubuntu 18.04
 
-Python 3.6
+Python 3
 
 # Usage
 
@@ -21,4 +21,17 @@ python3 siv.py -i -D important_directory -V verificationDB.csv -R report.txt -H 
 # Example 2: Verification mode
 python3 siv.py -v -D important_directory -V verificationDB.csv -R report.txt
 ```
+
+# Detectable Changes
+
+* New or removed files/directories
+* Files with a different size than recorded
+* Files with a different message digest than computed before
+* Files/directories with a different user/group
+* Files/directories with modified access right
+* Files/directories with a different modification date
+
+# LICENSE
+
+GNU General Public License v3.0
 
