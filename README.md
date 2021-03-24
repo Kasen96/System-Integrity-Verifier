@@ -6,9 +6,10 @@ The SIV can be run either in initialization mode or in verification mode.
 
 # Environment
 
-MacOS / Ubuntu 18.04
-
-Python 3
+* MacOS / Ubuntu 18.04
+* Python 3.7
+* Gooey
+* PyInstaller
 
 # Usage
 
@@ -26,9 +27,9 @@ python3 siv.py -v -D important_directory -V verificationDB.csv -R report.txt
 
 <p align="center">
     <img src="https://github.com/Kasen96/System-Integrity-Verifier/blob/master/images/Initialization.png" 
-        width="500" height="auto">
+        width="400" height="auto">
     <img src="https://github.com/Kasen96/System-Integrity-Verifier/blob/master/images/Verification.png" 
-        width="500" height="auto">
+        width="400" height="auto">
 </p>
 
 # Detectable Changes
