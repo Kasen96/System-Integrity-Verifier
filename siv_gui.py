@@ -344,4 +344,5 @@ def main():
 
 
 if __name__ == '__main__':
+    # build doc: https://github.com/chriskiehl/Gooey/tree/master/docs/packaging
     main()
