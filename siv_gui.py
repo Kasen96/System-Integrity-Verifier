@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 
-# A System Integrity Verifier(SIV)
+# GUI of A System Integrity Verifier(SIV)
 
+import argparse
 import argparse
 import os
 import sys
@@ -11,6 +12,8 @@ import grp
 import time
 import hashlib
 import stat
+from gooey import Gooey, GooeyParser
+
 
 total_dirs = 0
 total_files = 0
@@ -48,21 +51,6 @@ def is_sub_path(directory, file):
     file_path = os.path.abspath(file)
 
     return file_path.startswith(dir_path)
-
-
-def check_overwrite(file):
-    """
-    ask the user whether to overwrite the existing file.
-    :param file:
-    :return:
-    """
-    answer = input(f"Do you want to overwrite the '{file}'? [Y/n]")
-    if answer.lower() == 'y' or answer.lower() == 'yes' or answer == '':
-        return True
-    elif answer.lower() == 'n' or answer.lower() == 'no':
-        return False
-    else:
-        sys.exit("Unrecognized input, abort.")
 
 
 def traverse_dir(path, hash_fuc):
@@ -142,15 +130,11 @@ def initialization_mode(monitored_dir, verification_file, report_file, hash_fuc)
     if os.path.isdir(verification_file):
         sys.exit("The verification file can not be a directory.")
     if os.path.isfile(verification_file):
-        print("The verification file already exists.")
-        if not check_overwrite(verification_file):
-            sys.exit("The verification file remains, abort.")
+        sys.exit("The verification file already exists.")
     if os.path.isdir(report_file):
         sys.exit("The report file can not be a directory.")
     if os.path.isfile(report_file):
-        print("The report file already exists.")
-        if not check_overwrite(report_file):
-            sys.exit("The report file remains, abort.")
+        sys.exit("The report file already exists.")
 
     start_time = time.perf_counter()
 
@@ -202,9 +186,7 @@ def verification_mode(monitored_dir, verification_file, report_file):
     if os.path.isdir(report_file):
         sys.exit("The report file can not be a directory.")
     if os.path.isfile(report_file):
-        print("The report file already exists.")
-        if not check_overwrite(report_file):
-            sys.exit("The report file remains, abort.")
+        sys.exit("The report file already exists.")
 
     # compare files
     with open(verification_file, 'r') as verification_csv_file, open(report_file, 'w') as wr_file:
@@ -283,34 +265,7 @@ def verification_mode(monitored_dir, verification_file, report_file):
     print(f"The report file is stored in the '{os.path.abspath(report_file)}'.")
 
 
-def main():
-    # command line parser
-    description_text = "A very simple system integrity verifier(SIV)."
-    example_text = '''
-    Example 1: Initialization mode
-    siv.py -i -D important_directory -V verificationDB.csv -R my_report.txt -H sha1
-    Example 2: Verification mode
-    siv.py -v -D important_directory -V verificationDB.csv -R my_report2.txt'''
-
-    parser = argparse.ArgumentParser(description=description_text,
-                                     epilog=example_text,
-                                     formatter_class=argparse.RawTextHelpFormatter)
-
-    exc_group = parser.add_mutually_exclusive_group(required=True)  # at least one argument
-    exc_group.add_argument('-i', dest="mode", action="store_const", const='i', help="use the initialization mode")
-    exc_group.add_argument('-v', dest="mode", action="store_const", const='v', help="use the verification mode")
-
-    parser.add_argument('-D', dest="monitored_dir", metavar="monitored_directory", nargs=1, required=True,
-                        help="specify the path of the monitored directory")
-    parser.add_argument('-V', dest="verification_file", metavar="verification_file", nargs=1, required=True,
-                        help="specify the path of the verification file")
-    parser.add_argument('-R', dest="report_file", metavar="report_file", nargs=1, required=True,
-                        help="specify the path of the report file")
-    parser.add_argument('-H', dest="hash_fuc", nargs=1, choices=HASH_LISTS, help="specify the hash function")
-
-    args = parser.parse_args()
-
-    mode = args.mode
+def exec_i(args):
     monitored_dir = args.monitored_dir[0]
     verification_file = args.verification_file[0]
     report_file = args.report_file[0]
@@ -320,24 +275,72 @@ def main():
     if os.path.splitext(report_file)[-1] == "":
         report_file += ".txt"
 
-    # initialization mode
-    if mode == 'i':
-        print("Start the initialization mode.")
+    if args.hash_fuc is None:
+        raise Exception("The hash function('-H') is required in the initialization mode.")
+    hash_fuc = args.hash_fuc[0]
 
-        if args.hash_fuc is None:
-            parser.error("The hash function('-H') is required in the initialization mode.")
-        hash_fuc = args.hash_fuc[0]
+    initialization_mode(monitored_dir, verification_file, report_file, hash_fuc)
 
-        initialization_mode(monitored_dir, verification_file, report_file, hash_fuc)
 
-    # verification mode
-    else:  # mode == 'v'
-        if args.hash_fuc is not None:
-            parser.error("The hash function('-H') can not be used in the verification mode.")
-        else:
-            print("Start the verification mode.")
+def exec_v(args):
+    monitored_dir = args.monitored_dir[0]
+    verification_file = args.verification_file[0]
+    report_file = args.report_file[0]
 
-        verification_mode(monitored_dir, verification_file, report_file)
+    if os.path.splitext(verification_file)[-1] == "":
+        verification_file += ".csv"
+    if os.path.splitext(report_file)[-1] == "":
+        report_file += ".txt"
+
+    verification_mode(monitored_dir, verification_file, report_file)
+
+
+@Gooey(program_name="System Integrity Verifier",
+       menu=[{
+           'name': 'Help',
+           'items': [{
+               'type': 'Link',
+               'menuTitle': 'Documentation',
+               'url': 'https://github.com/Kasen96/System-Integrity-Verifier'
+           }]
+       }],
+       optional_cols=1,
+       show_restart_button=False,
+       navigation="TABBED",
+       clear_before_run=True,
+       sidebar_title='Mode')
+def main():
+    # command line parser
+    description_text = "A very simple GUI for SIV."
+    parser = GooeyParser(description=description_text)
+    subparsers = parser.add_subparsers(help='sub-command')
+
+    # Initialization Mode
+    parser_i = subparsers.add_parser('Initialization', help='Initialization Mode')
+    parser_i.set_defaults(func=exec_i)
+    group_i = parser_i.add_argument_group("Required arguments")
+    group_i.add_argument('-D', dest="monitored_dir", metavar="Monitored Directory", nargs=1, required=True,
+                         help="Select the path of the directory to be monitored", widget='DirChooser')
+    group_i.add_argument('-V', dest="verification_file", metavar="Verification File", nargs=1, required=True,
+                         help="Enter the name of the verification file(.csv) to be saved", widget='FileSaver')
+    group_i.add_argument('-R', dest="report_file", metavar="Report File", nargs=1, required=True,
+                         help="Enter the name of the report file(.txt) to be saved", widget='FileSaver')
+    group_i.add_argument('-H', dest="hash_fuc", metavar='Digest', nargs=1, choices=HASH_LISTS,
+                         help="Select the hash function")
+
+    # Verification Mode
+    parser_v = subparsers.add_parser('Verification', help='Verification Mode')
+    parser_v.set_defaults(func=exec_v)
+    group_v = parser_v.add_argument_group("Required arguments")
+    group_v.add_argument('-D', dest="monitored_dir", metavar="Monitored Directory", nargs=1, required=True,
+                         help="Select the path of the monitored directory", widget='DirChooser')
+    group_v.add_argument('-V', dest="verification_file", metavar="Verification File", nargs=1, required=True,
+                         help="Select the path of the verification file(.csv)", widget='FileChooser')
+    group_v.add_argument('-R', dest="report_file", metavar="Report File", nargs=1, required=True,
+                         help="Enter the name of the report file(.txt) to be saved", widget='FileSaver')
+
+    args = parser.parse_args()
+    args.func(args)
 
 
 if __name__ == '__main__':
