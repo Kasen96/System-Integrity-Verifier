@@ -304,6 +304,7 @@ def exec_v(args):
                'url': 'https://github.com/Kasen96/System-Integrity-Verifier'
            }]
        }],
+       default_size=(610, 610),
        optional_cols=1,
        show_restart_button=False,
        navigation="TABBED",
