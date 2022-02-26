@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# A System Integrity Verifier(SIV)
+# System Integrity Verifier(SIV)
 
 import argparse
 import os
@@ -11,6 +11,7 @@ import grp
 import time
 import hashlib
 import stat
+from typing import Generator
 
 total_dirs = 0
 total_files = 0
@@ -20,7 +21,7 @@ HASH_LISTS = list(hashlib.algorithms_guaranteed)
 
 class FileInfo:
     """
-    A single file's information.
+    a single file's information.
     """
     def __init__(self, f_path=None, f_size=None, user_name=None,
                  group_name=None, access_right=None,
@@ -37,12 +38,9 @@ class FileInfo:
         return bool(self.f_path)
 
 
-def is_sub_path(directory, file):
+def is_sub_path(directory: str, file: str) -> bool:
     """
-    check the location of the verification file and the report file are outside the monitored directory.
-    :param directory:
-    :param file:
-    :return: boolean
+    check whether the location of the verification file and the report file are outside the monitored directory.
     """
     dir_path = os.path.abspath(directory)
     file_path = os.path.abspath(file)
@@ -50,14 +48,12 @@ def is_sub_path(directory, file):
     return file_path.startswith(dir_path)
 
 
-def check_overwrite(file):
+def check_overwrite(file: str) -> bool:
     """
     ask the user whether to overwrite the existing file.
-    :param file:
-    :return:
     """
     answer = input(f"Do you want to overwrite the '{file}'? [Y/n]")
-    if answer.lower() == 'y' or answer.lower() == 'yes' or answer == '':
+    if answer.lower() == 'y' or answer.lower() == 'yes':
         return True
     elif answer.lower() == 'n' or answer.lower() == 'no':
         return False
@@ -65,19 +61,47 @@ def check_overwrite(file):
         sys.exit("Unrecognized input, abort.")
 
 
-def traverse_dir(path, hash_fuc):
+def valid_files_dirs(monitored_dir: str, verification_file: str, report_file: str, mode: str):
     """
-    use os.walk() to traverse directories,
-    and use os.stat() to collect information,
-    store it in the class FileInfo.
-    :param path:
-    :param hash_fuc:
-    :return: file_info
+    valid files and directories in initialization mode and verification mode.
     """
+    # dir exists?
+    if not os.path.exists(monitored_dir):
+        sys.exit(f"The path '{monitored_dir}' does not exist.")
+    if not os.path.isdir(monitored_dir):
+        sys.exit(f"The path '{monitored_dir}' is not a directory.")
+    # outside or inside?
+    if is_sub_path(monitored_dir, verification_file):
+        sys.exit("The validated file can not be in the monitored directory.")
+    if is_sub_path(monitored_dir, report_file):
+        sys.exit("The report file can not be in the monitored directory.")
+    # file exists?
+    if os.path.isdir(verification_file):
+        sys.exit("The verification file can not be a directory.")
+    if mode == "init" and os.path.isfile(verification_file):
+        print("The verification file already exists.")
+        if not check_overwrite(verification_file):
+            sys.exit("The verification file remains, abort.")
+    if mode == "verif" and not os.path.isfile(verification_file):
+        sys.exit("The verification file does not exist.")
+    if os.path.isdir(report_file):
+        sys.exit("The report file can not be a directory.")
+    if os.path.isfile(report_file):
+        print("The report file already exists.")
+        if not check_overwrite(report_file):
+            sys.exit("The report file remains, abort.")
+
+
+def traverse_dir(path: str, hash_fuc: str) -> Generator[FileInfo, any, None]:
+    """
+    use "os.walk()" to traverse directories,
+    and use "os.stat()" to collect information,
+    store it in the class "FileInfo".
+    """
+    global total_dirs, total_files
     file_info = FileInfo()
     abs_path = os.path.abspath(path)
     all_dirs_files = []
-    global total_dirs, total_files
 
     # count the number of dirs and files
     for root, dirs, files in os.walk(abs_path):
@@ -95,23 +119,18 @@ def traverse_dir(path, hash_fuc):
         file_info.f_size = file_stat.st_size
         file_info.user_name = pwd.getpwuid(file_stat.st_uid).pw_name
         file_info.group_name = grp.getgrgid(file_stat.st_gid).gr_name
-        # oct
-        # file_info.access_right = oct(file_stat.st_mode)
-        # symbolic
-        file_info.access_right = stat.filemode(file_stat.st_mode)
+        # file_info.access_right = oct(file_stat.st_mode)  # oct
+        file_info.access_right = stat.filemode(file_stat.st_mode)  # symbolic
         file_info.modified_date = time.asctime(time.localtime(file_stat.st_mtime))
-        if os.path.isfile(file_path):  # is file?
+        if os.path.isfile(file_path):
             # get the checksum
             hash_obj = hashlib.new(hash_fuc)
             f_size = file_stat.st_size
-            try:
-                with open(file_path, mode='rb') as f:
-                    while f_size:
-                        content = f.read(1024)
-                        hash_obj.update(content)
-                        f_size -= len(content)
-            except IOError:
-                sys.exit(f"Unable to read the file '{file_path}'.")
+            with open(file_path, mode='rb') as f:
+                while f_size:
+                    content = f.read(1024)
+                    hash_obj.update(content)
+                    f_size -= len(content)
             file_info.message_digest = hash_obj.hexdigest()
         else:  # is dir
             file_info.message_digest = None
@@ -119,38 +138,11 @@ def traverse_dir(path, hash_fuc):
         yield file_info
 
 
-def initialization_mode(monitored_dir, verification_file, report_file, hash_fuc):
+def initialization_mode(monitored_dir: str, verification_file: str, report_file: str, hash_fuc: str):
     """
     initialization mode.
-    :param monitored_dir:
-    :param verification_file:
-    :param report_file:
-    :param hash_fuc:
-    :return:
     """
-    # dir exists?
-    if not os.path.exists(monitored_dir):
-        sys.exit(f"The path '{monitored_dir}' does not exist.")
-    if not os.path.isdir(monitored_dir):
-        sys.exit(f"The path '{monitored_dir}' is not a directory.")
-    # outside or inside?
-    if is_sub_path(monitored_dir, verification_file):
-        sys.exit("The verification file can not be inside the monitored directory.")
-    if is_sub_path(monitored_dir, report_file):
-        sys.exit("The report file can not be inside the monitored directory.")
-    # file exists?
-    if os.path.isdir(verification_file):
-        sys.exit("The verification file can not be a directory.")
-    if os.path.isfile(verification_file):
-        print("The verification file already exists.")
-        if not check_overwrite(verification_file):
-            sys.exit("The verification file remains, abort.")
-    if os.path.isdir(report_file):
-        sys.exit("The report file can not be a directory.")
-    if os.path.isfile(report_file):
-        print("The report file already exists.")
-        if not check_overwrite(report_file):
-            sys.exit("The report file remains, abort.")
+    valid_files_dirs(monitored_dir, verification_file, report_file, "init")
 
     start_time = time.perf_counter()
 
@@ -179,32 +171,12 @@ def initialization_mode(monitored_dir, verification_file, report_file, hash_fuc)
     print(f"The report file is stored in the '{os.path.abspath(report_file)}'.")
 
 
-def verification_mode(monitored_dir, verification_file, report_file):
+def verification_mode(monitored_dir: str, verification_file: str, report_file: str):
     """
     verification mode.
-    :param monitored_dir:
-    :param verification_file:
-    :param report_file:
-    :return:
     """
     global warnings_num
-
-    # outside or inside?
-    if is_sub_path(monitored_dir, verification_file):
-        sys.exit("The verification file can not be inside the monitored directory.")
-    if is_sub_path(monitored_dir, report_file):
-        sys.exit("The report file can not be inside the monitored directory.")
-    # file exists?
-    if os.path.isdir(verification_file):
-        sys.exit("The verification file can not be a directory.")
-    if not os.path.isfile(verification_file):
-        sys.exit("The verification file does not exist.")
-    if os.path.isdir(report_file):
-        sys.exit("The report file can not be a directory.")
-    if os.path.isfile(report_file):
-        print("The report file already exists.")
-        if not check_overwrite(report_file):
-            sys.exit("The report file remains, abort.")
+    valid_files_dirs(monitored_dir, verification_file, report_file, "verif")
 
     # compare files
     with open(verification_file, 'r') as verification_csv_file, open(report_file, 'w') as wr_file:
