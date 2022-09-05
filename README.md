@@ -26,10 +26,8 @@ python3 siv.py -v -D important_directory -V verificationDB.csv -R report.txt
 # GUI
 
 <p align="center">
-    <img src="https://github.com/Kasen96/System-Integrity-Verifier/blob/master/images/Initialization.png" 
-        width="400" height="auto">
-    <img src="https://github.com/Kasen96/System-Integrity-Verifier/blob/master/images/Verification.png" 
-        width="400" height="auto">
+    <img src="images/Initialization.png" width="400" height="auto" />
+    <img src="images/Verification.png" width="400" height="auto" />
 </p>
 
 # Detectable Changes
